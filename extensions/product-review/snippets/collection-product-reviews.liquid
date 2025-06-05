@@ -1,0 +1,123 @@
+{% comment %}
+  Snippet to dynamically inject review summaries into product cards on collection pages.
+  Usage: Include in theme.liquid or collection.liquid.
+{% endcomment %}
+
+<script>
+  function initCollectionProductReviews() {
+    const productCards = document.querySelectorAll('.card-wrapper.product-card-wrapper');
+    if (productCards.length === 0) {
+      console.warn('No product cards found.');
+      return;
+    }
+
+    const shop = Shopify.shop;
+
+    productCards.forEach(card => {
+      if (card.querySelector('.product-review-summary-placeholder') || card.querySelector('.rating')) {
+        return;
+      }
+
+      const productLink = card.querySelector('a[href*="/products/"]');
+      if (!productLink) {
+        console.warn('No product link found in card:', card);
+        return;
+      }
+      const handle = productLink.href.split('/products/')[1]?.split('?')[0];
+      if (!handle) {
+        console.warn('No product handle found in card:', card);
+        return;
+      }
+
+      fetch(`/products/${handle}.js`)
+        .then(res => {
+          if (!res.ok) throw new Error(`Failed to fetch product data for handle: ${handle}`);
+          return res.json();
+        })
+        .then(product => {
+          const productId = product.id;
+          if (!productId) {
+            console.warn('No product ID found for handle:', handle);
+            return;
+          }
+
+          const placeholder = document.createElement('div');
+          placeholder.className = 'product-review-summary-placeholder';
+          placeholder.dataset.productId = productId;
+          placeholder.dataset.reviewsLoaded = 'false';
+          placeholder.style.marginTop = '5px';
+          placeholder.style.minHeight = '20px';
+          const target = card.querySelector('.card__information');
+          if (target) {
+            target.appendChild(placeholder);
+          } else {
+            console.warn('No card__information found in card:', card);
+            return;
+          }
+
+          fetch(`/apps/rating/get-rating?shop=${encodeURIComponent(shop)}&product_id=${encodeURIComponent(productId)}`)
+            .then(res => {
+              if (!res.ok) {
+                console.warn(`Could not fetch reviews for product ${productId}. Status: ${res.status}`);
+                return { reviews: [], averageRating: 0, totalReviews: 0 };
+              }
+              return res.json();
+            })
+            .then(data => {
+              const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+              let totalStars = 0;
+              reviews.forEach(r => {
+                const starRating = parseInt(r.star, 10);
+                if (!isNaN(starRating)) totalStars += starRating;
+              });
+              const totalValidReviews = reviews.filter(r => !isNaN(parseInt(r.star, 10))).length;
+              const averageRating = totalValidReviews > 0 ? (totalStars / totalValidReviews) : 0;
+              const reviewCount = totalValidReviews;
+
+              let reviewHtml = '';
+              if (reviewCount > 0) {
+                const filledStars = Math.round(averageRating);
+                const emptyStars = 5 - filledStars;
+                reviewHtml = `
+                  <div class="stars" style="font-size: 0.9em; color: #f5a623; line-height: 1; display: inline-block;">
+                    ${'★'.repeat(filledStars)}${'☆'.repeat(emptyStars)}
+                  </div>
+                  <span class="review-count" style="font-size: 0.85em; margin-left: 5px; color: #555;">(${reviewCount})</span>
+                `;
+              }
+              placeholder.innerHTML = reviewHtml;
+              placeholder.dataset.reviewsLoaded = 'true';
+            })
+            .catch(error => {
+              console.error(`Error fetching reviews for product ${productId}:`, error);
+            });
+        })
+        .catch(error => {
+          console.error(`Error fetching product data for handle ${handle}:`, error);
+        });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCollectionProductReviews);
+  } else {
+    initCollectionProductReviews();
+  }
+  document.addEventListener('shopify:section:load', () => {
+    setTimeout(initCollectionProductReviews, 50);
+  });
+</script>
+
+<style>
+  .product-review-summary-placeholder .stars {
+    font-size: 0.9em;
+    color: #f5a623;
+    line-height: 1;
+    display: inline-block;
+  }
+  .product-review-summary-placeholder .review-count {
+    font-size: 0.85em;
+    margin-left: 5px;
+    color: #555;
+  }
+</style>

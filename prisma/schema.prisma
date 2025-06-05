@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id            String    @id @default(uuid())
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+
+  @@map("Session")
+}
+
+model Rating {
+  id           Int      @id @default(autoincrement())
+  shop         String
+  productId    BigInt
+  customerName String
+  star         Int
+  review       String
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  author       String?
+  reviewTitle  String?
+  media        String?  @db.Text
+
+  @@index([productId])
+  @@map("rating_tb")
+}
+
+model Settings {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+
+  @@map("rating_admin_tb")
+}
+
+model account {
+  id             Int      @id @default(autoincrement())
+  username       String   @unique
+  email          String   @unique
+  serialkey      String?  @unique
+  createdat      DateTime @default(now())
+  updatedat      DateTime @default(now())
+  shop           String   @unique
+  plan           plantype @default(FREE)
+  subscriptionid BigInt?
+}
+
+enum plantype {
+  FREE
+  STANDARD_MONTHLY
+  STANDARD_YEARLY
+  NONE
+}

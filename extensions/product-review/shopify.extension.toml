@@ -1,0 +1,7 @@
+name = "product review"
+type = "theme"
+
+[[blocks]]
+type = "app_embed"
+name = "Collection Reviews Embed"
+file = "blocks/collection-reviews-embed.liquid"

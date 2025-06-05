@@ -1,0 +1,491 @@
+{% schema %}
+{
+  "name": "review slider",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js" defer></script>
+
+<style>
+  #review_grid {
+    display: grid;
+    justify-content: center;
+    gap: 10px;
+  }
+  #review_grid.single-review {
+    grid-template-columns: repeat(auto-fit, 300px);
+  }
+  #review_grid.multi-review {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  @media (max-width: 1280px) {
+    #review_grid.multi-review {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+  }
+  @media (max-width: 600px) {
+    #review_grid.multi-review {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  #review_grid > div,
+  .owl-carousel .item > div {
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    background: #fff;
+    font-family: Arial, sans-serif;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    font-size: 1.1rem;
+    color: #333;
+  }
+
+  #review_grid > div:hover,
+  .owl-carousel .item > div:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  }
+
+  .stars {
+    color: #f5a623;
+    font-size: 2rem;
+    margin: 10px 0;
+  }
+
+  .owl-carousel .owl-stage {
+    display: flex;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .owl-carousel .owl-item {
+    padding: 10px;
+  }
+
+  .owl-carousel {
+    width: 100%;
+    max-width: 970px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .owl-carousel.has-more-than-three .owl-nav {
+    display: flex;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    justify-content: space-between;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .owl-carousel .owl-nav button {
+    pointer-events: auto;
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .owl-carousel .owl-nav button:hover {
+    background: #f5a623;
+    color: #fff;
+    transform: scale(1.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .owl-carousel .owl-nav button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .owl-carousel .owl-nav .owl-prev {
+    margin-left: -41px;
+    margin-top: -30px;
+    font-size: 30px !important;
+    display: flex ;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .owl-carousel .owl-nav .owl-next {
+    margin-right: -41px;
+    margin-top: -30px;
+    font-size: 30px !important;
+    display: flex ;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .owl-carousel .owl-dots {
+    display: flex !important;
+    justify-content: center;
+    margin-top: 25px;
+    gap: 10px;
+  }
+
+  .owl-carousel .owl-dot {
+    width: 14px;
+    height: 14px;
+    background: #ccc;
+    border-radius: 50%;
+    transition: background 0.3s;
+  }
+
+  @media (max-width: 600px) {
+    .owl-carousel {
+      max-width: 100%;
+    }
+  }
+
+  /* Styles for horizontally scrollable media strip in GRID view */
+  .review-media-strip-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden; /* Hide vertical scrollbar if any */
+    gap: 8px; /* Space between media items */
+    margin-top: 10px;
+    padding-bottom: 5px; /* For scrollbar visibility if needed, or just spacing */
+    max-width: 100%; /* Ensure it doesn't overflow the card */
+    justify-content: flex-start; /* Align items to the start */
+  }
+
+  .review-media-strip-grid::-webkit-scrollbar {
+    height: 5px; /* Adjust scrollbar height */
+  }
+  .review-media-strip-grid::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+  .review-media-strip-grid::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+  }
+
+  .review-media-strip-grid > .clickable-review-media {
+    width: 100px; /* Fixed width for each media item to show one primarily */
+    height: 100px; /* Fixed height */
+    object-fit: cover;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    flex-shrink: 0; /* Prevent items from shrinking */
+    display: block; /* Ensure proper block display for img/video */
+  }
+</style>
+
+<!-- Modal HTML Structure -->
+<div id="mediaReviewModal" style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow-y: hidden; background-color: rgba(0,0,0,0.1);">
+  <div style="background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 800px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; max-height: 90vh;">
+    <span id="closeReviewMediaModal" style="color: #333; float: right; font-size: 30px; font-weight: bold; cursor: pointer; line-height: 0.8; align-self: flex-end;">&times;</span>
+    <div id="modalReviewMediaContent" style="margin-top: 10px; text-align: center; overflow-y: hidden; flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+      <!-- Clicked media item will be injected here -->
+    </div>
+  </div>
+</div>
+
+<div id="review_section" style="display: none;">
+  <center>
+    <div style="padding: 30px 0;">
+      <h2 id="review-display-heading" style="text-align: center; font-size: 2rem; margin-bottom: 20px;"></h2>
+      <div id="status_dis" style="text-align: center; display: none;"></div>
+      <div id="review_grid" style="display: none;"></div>
+      <div class="owl-carousel owl-theme" id="review_slider" style="display: none;"></div>
+    </div>
+  </center>
+</div>
+
+<script>
+  function setEqualReviewHeights() {
+    const gridContainer = document.getElementById("review_grid");
+    const sliderContainer = document.getElementById("review_slider");
+    let reviewElements = [];
+
+    if (gridContainer && gridContainer.style.display === "grid") {
+        reviewElements = Array.from(gridContainer.querySelectorAll(":scope > div"));
+    } else if (sliderContainer && sliderContainer.style.display === "block" && $(sliderContainer).hasClass('owl-loaded')) {
+        // Targets the content div inside each item of the main review slider
+        reviewElements = Array.from(sliderContainer.querySelectorAll(".owl-item > .item > div"));
+    }
+
+    if (reviewElements.length === 0) return;
+
+    // Reset heights first
+    reviewElements.forEach(item => {
+        item.style.minHeight = 'auto';
+    });
+
+    // Use requestAnimationFrame to ensure calculations happen after layout is stable
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => { // Double rAF for even more certainty after potential reflows
+        let maxHeight = 0;
+        reviewElements.forEach(item => {
+          const currentHeight = item.offsetHeight;
+          if (currentHeight > maxHeight) {
+            maxHeight = currentHeight;
+          }
+        });
+
+        if (maxHeight > 0) {
+          reviewElements.forEach(item => {
+            item.style.minHeight = maxHeight + 'px';
+          });
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const shop = Shopify.shop;
+    const productId = {{ product.id | json }};
+    const url = `/apps/rating/get-rating?shop=${shop}&product_id=${productId ?? ""}`;
+    const reviewSection = document.getElementById("review_section");
+    const statusDiv = document.getElementById("status_dis");
+    const grid = document.getElementById("review_grid");
+    const slider = document.getElementById("review_slider");
+    const reviewDisplayHeading = document.getElementById("review-display-heading");
+
+    fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        const { reviews, displayType, settings, reviewDisplayHeading: heading } = data || {};
+        if (!settings || !Array.isArray(reviews)) {
+          reviewSection.style.display = "none";
+          return;
+        }
+        if (settings.status?.value.toLowerCase() === "enabled") {
+          reviewSection.style.display = "block";
+          reviewDisplayHeading.textContent = heading || "Customer Reviews";
+
+          if (reviews.length === 0) {
+            statusDiv.style.display = "block";
+            statusDiv.innerText = "No reviews yet.";
+            return;
+          }
+
+          statusDiv.style.display = "none";
+
+          const isGrid = displayType === "grid";
+          const isFew = reviews.length <= 3;
+
+          if (isGrid) {
+            grid.classList.add(isFew ? "single-review" : "multi-review");
+          }
+
+          reviews.forEach(r => {
+            const stars = `<div class="stars">${"★".repeat(r.star)}${"☆".repeat(5 - r.star)}</div>`;
+            const date = new Date(r.createdAt).toLocaleDateString();
+            let mediaDisplayHTML = '';
+            if (r.media) {
+              let mediaUrls = [];
+              try {
+                const parsedMedia = JSON.parse(r.media);
+                if (Array.isArray(parsedMedia)) {
+                  mediaUrls = parsedMedia;
+                } else if (typeof parsedMedia === 'string' && parsedMedia.trim() !== '') {
+                  mediaUrls.push(parsedMedia);
+                }
+              } catch (e) {
+                if (typeof r.media === 'string' && r.media.trim() !== '' && !r.media.startsWith('[')) {
+                  mediaUrls.push(r.media);
+                }
+              }
+
+              if (mediaUrls.length > 0) {
+                if (isGrid) {
+                  mediaDisplayHTML = `<div class="review-media-strip-grid">`; // New class for grid media strip
+                  mediaUrls.forEach(url => {
+                    if (/\.(jpeg|jpg|gif|png)$/i.test(url)) {
+                      mediaDisplayHTML += `<img src="${url}" alt="Review media" class="clickable-review-media" data-media-url="${url}">`;
+                    } else if (/\.(mp4|webm|ogg)$/i.test(url)) {
+                      // Videos in grid strip: muted, loop, no controls for cleaner look. Click opens modal.
+                      mediaDisplayHTML += `<video src="${url}" muted loop class="clickable-review-media" data-media-url="${url}"></video>`;
+                    }
+                  });
+                  mediaDisplayHTML += `</div>`;
+                } else { // Non-grid display logic
+                  if (mediaUrls.length === 1) {
+                    const url = mediaUrls[0];
+                    if (/\.(jpeg|jpg|gif|png)$/i.test(url)) {
+                      mediaDisplayHTML = `<img src="${url}" alt="Review media" class="clickable-review-media" data-media-url="${url}" style="width: 120px; height: 120px; margin-top: 15px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 1px solid #eee; display: block; margin-left: auto; margin-right: auto;">`;
+                    } else if (/\.(mp4|webm|ogg)$/i.test(url)) {
+                      mediaDisplayHTML = `<video src="${url}" controls class="clickable-review-media" data-media-url="${url}" style="width: 120px; height: 120px; margin-top: 15px; border-radius: 8px; cursor: pointer; border: 1px solid #eee; display: block; margin-left: auto; margin-right: auto; object-fit: cover;"></video>`;
+                    }
+                  } else { // mediaUrls.length > 1 && !isGrid
+                    // Original strip for multiple media in non-grid contexts (e.g., main review slider)
+                    mediaDisplayHTML = `<div class="review-media-strip" style="display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; gap: 10px; margin-top: 15px; padding-bottom: 10px; border-top: 1px solid #eee; padding-top: 15px; justify-content: center;">`;
+                    mediaUrls.forEach(url => {
+                      if (/\.(jpeg|jpg|gif|png)$/i.test(url)) {
+                        mediaDisplayHTML += `<img src="${url}" alt="Review media thumbnail" class="clickable-review-media" data-media-url="${url}" style="width: 120px; height: 120px; border-radius: 5px; object-fit: cover; cursor: pointer; border: 1px solid #ddd; flex-shrink: 0;">`;
+                      } else if (/\.(mp4|webm|ogg)$/i.test(url)) {
+                        mediaDisplayHTML += `<video src="${url}" controls muted loop class="clickable-review-media" data-media-url="${url}" style="width: 120px; height: 120px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; object-fit: cover; flex-shrink: 0;"></video>`;
+                      }
+                    });
+                    mediaDisplayHTML += `</div>`;
+                  }
+                }
+              }
+            }
+            // console.log("media data from server:", r.media, "Generated HTML:", mediaDisplayHTML);
+            const content = `
+              <div>
+                <strong>${r.customerName}</strong> (${date})<br/>
+                ${stars}
+                <strong>${r.reviewTitle}</strong>
+                <div>${r.review}</div>
+                ${mediaDisplayHTML}
+              </div>
+            `;
+            if (isGrid) {
+              grid.insertAdjacentHTML("beforeend", content);
+            } else {
+              slider.insertAdjacentHTML("beforeend", `<div class="item">${content}</div>`);
+            }
+          });
+
+          if (isGrid) {
+            grid.style.display = "grid";
+            // No internal carousel initialization needed for grid items anymore
+            setEqualReviewHeights();
+            window.addEventListener("resize", setEqualReviewHeights);
+          } else {
+            slider.style.display = "block";
+            if (reviews.length > 3) {
+              slider.classList.add("has-more-than-three");
+            }
+
+            $("#review_slider").owlCarousel({
+              loop: reviews.length > 3,
+              margin: 20,
+              nav: reviews.length > 3,
+              dots: reviews.length > 3,
+              autoplay: reviews.length > 3,
+              autoplayTimeout: 5000,
+              center: false,
+              responsiveClass: true,
+              responsive: {
+                0: { items: 1 },
+                768: { items: 2 },
+                1024: { items: 3 }
+              },
+              onInitialized: setEqualReviewHeights,
+              onResized: setEqualReviewHeights
+            });
+
+            window.addEventListener("resize", setEqualReviewHeights);
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching or processing reviews:", error);
+        reviewSection.style.display = "none";
+      });
+
+    // Modal handling for individual media item
+    const mediaReviewModal = document.getElementById("mediaReviewModal");
+    const modalReviewMediaContent = document.getElementById("modalReviewMediaContent");
+    const closeReviewMediaModalBtn = document.getElementById("closeReviewMediaModal");
+
+    function openReviewMediaModal(mediaUrl) {
+      if (!mediaUrl) return;
+      modalReviewMediaContent.innerHTML = ''; // Clear previous content
+
+      let element;
+      if (/\.(jpeg|jpg|gif|png)$/i.test(mediaUrl)) {
+        element = document.createElement('img');
+        element.src = mediaUrl;
+        element.alt = "Review Media";
+        element.style.maxWidth = "100%";
+        element.style.maxHeight = "80vh"; // Limit height within viewport
+        element.style.borderRadius = "5px";
+        element.style.objectFit = "contain";
+        element.style.display = "block";
+        element.style.margin = "0 auto";
+      } else if (/\.(mp4|webm|ogg)$/i.test(mediaUrl)) {
+        element = document.createElement('video');
+        element.src = mediaUrl;
+        element.controls = true;
+        element.autoplay = true; // Autoplay in modal
+        element.style.maxWidth = "100%";
+        element.style.maxHeight = "80vh";
+        element.style.borderRadius = "5px";
+        element.style.display = "block";
+        element.style.margin = "0 auto";
+      }
+
+      if (element) {
+        modalReviewMediaContent.appendChild(element);
+      }
+      mediaReviewModal.style.display = "block";
+    }
+
+    function closeReviewMediaModal() {
+      modalReviewMediaContent.innerHTML = ''; // Clear content
+      // Pause video if playing
+      const video = modalReviewMediaContent.querySelector('video');
+      if (video) {
+        video.pause();
+      }
+      mediaReviewModal.style.display = "none";
+    }
+
+    closeReviewMediaModalBtn.onclick = closeReviewMediaModal;
+    mediaReviewModal.onclick = function(event) {
+      if (event.target == mediaReviewModal) { // Clicked on backdrop
+        closeReviewMediaModal();
+      }
+    }
+
+    // Event delegation for clickable media items
+    reviewSection.addEventListener('click', function(event) {
+      let targetElement = event.target;
+      // Check if the clicked element or its parent (if it's inside a video's controls) is the clickable media
+      while (targetElement != null && !targetElement.classList.contains('clickable-review-media')) {
+        if (targetElement.tagName === 'VIDEO' && targetElement.classList.contains('clickable-review-media')) {
+          // If it's the video itself, break
+          break;
+        }
+        targetElement = targetElement.parentElement;
+      }
+      
+      if (targetElement && targetElement.classList.contains('clickable-review-media')) {
+         // Prevent video click from triggering if controls were clicked
+        if (event.target.tagName === 'VIDEO' && event.target.controls && event.target === targetElement) {
+            // Let video controls work
+        } else {
+            const mediaUrl = targetElement.getAttribute('data-media-url');
+            if (mediaUrl) {
+                openReviewMediaModal(mediaUrl);
+            }
+        }
+      }
+    });
+
+  });
+</script>
