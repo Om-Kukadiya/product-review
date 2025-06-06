@@ -26,6 +26,10 @@ function validateRatingInput_MI(data) {
   if (!data.star || isNaN(parseInt(data.star)) || data.star < 1 || data.star > 5) {
     errors.push('Invalid star rating (must be 1-5)');
   }
+  // Optional: Validate email format if it exists
+  if (data.customerEmail && typeof data.customerEmail !== 'string') {
+    errors.push('Invalid customerEmail');
+  }
   return errors;
 }
 
@@ -36,12 +40,13 @@ function serializeRating_MI(rating) {
     productId: rating.productId.toString(),
     star: rating.star,
     customerName: rating.customerName,
+    customerEmail: rating.customerEmail || '', // Add this line
     reviewTitle: rating.reviewTitle || '',
     review: rating.review || '',
     status: rating.status || 'pending',
     author: rating.author || 'customer',
     createdAt: rating.createdAt.toISOString(),
-    media: rating.media, // Add the media field
+    media: rating.media,
   };
 }
 
@@ -129,13 +134,14 @@ export async function action({ request }) {
         });
       }
 
-      const { shop, productId, customerName, star, review, status } = data;
+      const { shop, productId, customerName, customerEmail, star, review, status } = data;
 
       const newRating_MI = await prisma.rating.create({
         data: {
           shop,
           productId: BigInt(productId),
           customerName,
+          customerEmail: customerEmail || null, // Add this line
           star: parseInt(star),
           review: review || '',
           status: status || 'pending',
@@ -166,7 +172,7 @@ export async function action({ request }) {
         });
       }
 
-      const { shop, productId, customerName, star, review, status } = data;
+      const { shop, productId, customerName, customerEmail, star, review, status } = data;
 
       const updated_MI = await prisma.rating.update({
         where: { id: BigInt(id) },
@@ -174,6 +180,7 @@ export async function action({ request }) {
           shop,
           productId: BigInt(productId),
           customerName,
+          customerEmail: customerEmail || null, // Add this line
           star: parseInt(star),
           review: review || '',
           status: status || 'pending',

@@ -12,6 +12,7 @@ export async function loader({ request }) {
     const url = new URL(request.url);
     const shop = url.searchParams.get('shop');
     const productId = url.searchParams.get('product_id');
+    const productIdsParam = url.searchParams.get('product_ids');
 
     if (!shop) {
       return new Response(JSON.stringify({ error: 'Missing shop parameter' }), {
@@ -34,72 +35,60 @@ export async function loader({ request }) {
 
     const serialkey_MI = account_MI.serialkey;
 
-    const statusSetting_MI = await prisma.settings.findUnique({
-      where: { key: serialkey_MI }
-    });
-    const displayTypeSetting_MI = await prisma.settings.findUnique({
-      where: { key: `${serialkey_MI}_displayStyle` }
-    });
-    const displayLimitSetting_MI = await prisma.settings.findUnique({
-      where: { key: `${serialkey_MI}_reviewLimit` }
-    });
-    const reviewDisplayHeadingSetting_MI = await prisma.settings.findUnique({
-      where: { key: `${serialkey_MI}_reviewDisplayHeading` }
+    const settingsResult = await prisma.settings.findMany({
+      where: { key: { in: [serialkey_MI, `${serialkey_MI}_displayStyle`, `${serialkey_MI}_reviewLimit`, `${serialkey_MI}_reviewDisplayHeading`] } }
     });
 
+    const settingsMap = settingsResult.reduce((acc, setting) => {
+      acc[setting.key] = setting;
+      return acc;
+    }, {});
+
+    const statusSetting_MI = settingsMap[serialkey_MI];
     if (!statusSetting_MI || statusSetting_MI.value.toLowerCase() !== 'enabled') {
-      return new Response(JSON.stringify([]), {
+      return new Response(JSON.stringify({ reviews: [], settings: { status: { value: 'disabled' } } }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    const displayType_MI = displayTypeSetting_MI?.value?.toLowerCase() || 'carousel';
-    const displayLimit_MI = parseInt(displayLimitSetting_MI?.value || "5");
-    const reviewDisplayHeading_MI = reviewDisplayHeadingSetting_MI?.value || "Customer Reviews";
+    const displayType_MI = settingsMap[`${serialkey_MI}_displayStyle`]?.value?.toLowerCase() || 'carousel';
+    const displayLimit_MI = parseInt(settingsMap[`${serialkey_MI}_reviewLimit`]?.value || "5");
+    const reviewDisplayHeading_MI = settingsMap[`${serialkey_MI}_reviewDisplayHeading`]?.value || "Customer Reviews";
 
-    const whereClause_MI = {
-      shop,
-      status: 'approved',
-      ...(productId ? { productId: BigInt(productId) } : {}),
-    };
+    const whereClause_MI = { shop, status: 'approved' };
+    if (productId) {
+      whereClause_MI.productId = BigInt(productId);
+    } else if (productIdsParam) {
+      const productIds = productIdsParam.split(',').map(id => BigInt(id));
+      if (productIds.length > 0) {
+        whereClause_MI.productId = { in: productIds };
+      }
+    }
 
     const ratings_MI = await prisma.rating.findMany({
       where: whereClause_MI,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: displayLimit_MI,
+      orderBy: { createdAt: 'desc' },
+      take: productId ? displayLimit_MI : undefined, // Only limit if fetching for a single product
     });
 
-    const appUrl = process.env.SHOPIFY_APP_URL || ''; // Get app URL, default to empty string if not set
-
+    const appUrl = process.env.SHOPIFY_APP_URL || '';
     const serialized_MI = ratings_MI.map((r) => {
       let processedMedia = null;
       if (r.media) {
         try {
-          const mediaPaths = JSON.parse(r.media); // Expecting an array of paths
+          const mediaPaths = JSON.parse(r.media);
           if (Array.isArray(mediaPaths)) {
             processedMedia = JSON.stringify(mediaPaths.map(path => path.startsWith('http') ? path : `${appUrl}${path}`));
-          } else if (typeof mediaPaths === 'string') {
-            // Handle case where r.media is a single path string but JSON.parse made it a string
-             processedMedia = JSON.stringify([mediaPaths.startsWith('http') ? mediaPaths : `${appUrl}${mediaPaths}`]);
           }
         } catch (e) {
-          // If r.media is not a JSON string (e.g., a single URL string for older data)
-          if (typeof r.media === 'string') {
-             // Check if it's already an absolute URL
-            if (r.media.startsWith('http')) {
-              processedMedia = r.media; // Keep it as is
-            } else {
-              // It's a single relative path, prepend appUrl and keep as a string
-              // The rating_status.liquid will handle parsing this if it's not an array
-              processedMedia = `${appUrl}${r.media}`;
-            }
+          if (typeof r.media === 'string' && r.media.startsWith('http')) {
+            processedMedia = JSON.stringify([r.media]);
+          } else if (typeof r.media === 'string') {
+            processedMedia = JSON.stringify([`${appUrl}${r.media}`]);
           }
         }
       }
-
       return {
         id: r.id.toString(),
         shop: r.shop,
@@ -112,18 +101,33 @@ export async function loader({ request }) {
         media: processedMedia,
       };
     });
+    
+    // If fetching for multiple products, group them
+    if (productIdsParam) {
+        const reviewsByProduct = serialized_MI.reduce((acc, review) => {
+            (acc[review.productId] = acc[review.productId] || []).push(review);
+            return acc;
+        }, {});
+        // Apply limit per product
+        for (const pid in reviewsByProduct) {
+            reviewsByProduct[pid] = reviewsByProduct[pid].slice(0, displayLimit_MI);
+        }
+        return new Response(JSON.stringify({ 
+            reviewsByProduct, 
+            displayType: displayType_MI,
+            settings: { status: { value: 'enabled' } }, 
+            reviewDisplayHeading: reviewDisplayHeading_MI 
+        }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+    }
 
-    const settingsData_MI = {
-      status: statusSetting_MI ? { key: serialkey_MI, value: statusSetting_MI.value } : null,
-      displayStyle: displayTypeSetting_MI ? { key: `${serialkey_MI}_displayStyle`, value: displayTypeSetting_MI.value } : null, 
-      reviewLimit: displayLimitSetting_MI ? { key: `${serialkey_MI}_reviewLimit`, value: displayLimitSetting_MI.value } : null, 
-      reviewDisplayHeading: reviewDisplayHeadingSetting_MI ? { key: `${serialkey_MI}_reviewDisplayHeading`, value: reviewDisplayHeadingSetting_MI.value } : null
-    };
 
     return new Response(JSON.stringify({ 
       reviews: serialized_MI, 
       displayType: displayType_MI,
-      settings: settingsData_MI, 
+      settings: { status: { value: 'enabled' } }, 
       reviewDisplayHeading: reviewDisplayHeading_MI 
     }), {
       status: 200,

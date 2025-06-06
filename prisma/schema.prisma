@@ -28,17 +28,18 @@ model Session {
 }
 
 model Rating {
-  id           Int      @id @default(autoincrement())
-  shop         String
-  productId    BigInt
-  customerName String
-  star         Int
-  review       String
-  status       String   @default("pending")
-  createdAt    DateTime @default(now())
-  author       String?
-  reviewTitle  String?
-  media        String?  @db.Text
+  id            Int      @id @default(autoincrement())
+  shop          String
+  productId     BigInt
+  customerName  String
+  star          Int
+  review        String
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  author        String?
+  reviewTitle   String?
+  media         String?  @db.Text
+  customerEmail String?
 
   @@index([productId])
   @@map("rating_tb")

@@ -150,6 +150,7 @@ export async function action({ request }) {
     const shop = formData.get('shop');
     const productId = formData.get('productId');
     const customerName = formData.get('customerName');
+    const customerEmail = formData.get('customerEmail');
     const review = formData.get('review');
     const star = formData.get('star');
     const status = formData.get('status');
@@ -179,6 +180,7 @@ export async function action({ request }) {
         shop,
         productId: BigInt(productId),
         customerName,
+        customerEmail,
         review,
         star: star !== undefined ? parseInt(star) : 0,
         status: status || 'pending',

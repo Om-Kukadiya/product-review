@@ -1,123 +1,243 @@
 {% comment %}
-  Snippet to dynamically inject review summaries into product cards on collection pages.
-  Usage: Include in theme.liquid or collection.liquid.
+  FINAL STRATEGY V6:
+  - The containing app block is now correctly limited to the "collection" template via its schema.
+  - This script, therefore, no longer needs its own faulty check and it has been removed.
+  - It will now correctly run ONCE on collection pages, placing a consolidated review carousel after the products.
 {% endcomment %}
 
-<script>
-  function initCollectionProductReviews() {
-    const productCards = document.querySelectorAll('.card-wrapper.product-card-wrapper');
-    if (productCards.length === 0) {
-      console.warn('No product cards found.');
-      return;
-    }
+<!-- External Libraries -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js" defer></script>
 
-    const shop = Shopify.shop;
-
-    productCards.forEach(card => {
-      if (card.querySelector('.product-review-summary-placeholder') || card.querySelector('.rating')) {
-        return;
-      }
-
-      const productLink = card.querySelector('a[href*="/products/"]');
-      if (!productLink) {
-        console.warn('No product link found in card:', card);
-        return;
-      }
-      const handle = productLink.href.split('/products/')[1]?.split('?')[0];
-      if (!handle) {
-        console.warn('No product handle found in card:', card);
-        return;
-      }
-
-      fetch(`/products/${handle}.js`)
-        .then(res => {
-          if (!res.ok) throw new Error(`Failed to fetch product data for handle: ${handle}`);
-          return res.json();
-        })
-        .then(product => {
-          const productId = product.id;
-          if (!productId) {
-            console.warn('No product ID found for handle:', handle);
-            return;
-          }
-
-          const placeholder = document.createElement('div');
-          placeholder.className = 'product-review-summary-placeholder';
-          placeholder.dataset.productId = productId;
-          placeholder.dataset.reviewsLoaded = 'false';
-          placeholder.style.marginTop = '5px';
-          placeholder.style.minHeight = '20px';
-          const target = card.querySelector('.card__information');
-          if (target) {
-            target.appendChild(placeholder);
-          } else {
-            console.warn('No card__information found in card:', card);
-            return;
-          }
-
-          fetch(`/apps/rating/get-rating?shop=${encodeURIComponent(shop)}&product_id=${encodeURIComponent(productId)}`)
-            .then(res => {
-              if (!res.ok) {
-                console.warn(`Could not fetch reviews for product ${productId}. Status: ${res.status}`);
-                return { reviews: [], averageRating: 0, totalReviews: 0 };
-              }
-              return res.json();
-            })
-            .then(data => {
-              const reviews = Array.isArray(data.reviews) ? data.reviews : [];
-              let totalStars = 0;
-              reviews.forEach(r => {
-                const starRating = parseInt(r.star, 10);
-                if (!isNaN(starRating)) totalStars += starRating;
-              });
-              const totalValidReviews = reviews.filter(r => !isNaN(parseInt(r.star, 10))).length;
-              const averageRating = totalValidReviews > 0 ? (totalStars / totalValidReviews) : 0;
-              const reviewCount = totalValidReviews;
-
-              let reviewHtml = '';
-              if (reviewCount > 0) {
-                const filledStars = Math.round(averageRating);
-                const emptyStars = 5 - filledStars;
-                reviewHtml = `
-                  <div class="stars" style="font-size: 0.9em; color: #f5a623; line-height: 1; display: inline-block;">
-                    ${'★'.repeat(filledStars)}${'☆'.repeat(emptyStars)}
-                  </div>
-                  <span class="review-count" style="font-size: 0.85em; margin-left: 5px; color: #555;">(${reviewCount})</span>
-                `;
-              }
-              placeholder.innerHTML = reviewHtml;
-              placeholder.dataset.reviewsLoaded = 'true';
-            })
-            .catch(error => {
-              console.error(`Error fetching reviews for product ${productId}:`, error);
-            });
-        })
-        .catch(error => {
-          console.error(`Error fetching product data for handle ${handle}:`, error);
-        });
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCollectionProductReviews);
-  } else {
-    initCollectionProductReviews();
-  }
-  document.addEventListener('shopify:section:load', () => {
-    setTimeout(initCollectionProductReviews, 50);
-  });
-</script>
-
+<!-- Styles for the consolidated review section -->
 <style>
-  .product-review-summary-placeholder .stars {
-    font-size: 0.9em;
-    color: #f5a623;
-    line-height: 1;
-    display: inline-block;
+  #consolidated-review-section {
+    display: none;
+    width: 100%;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+    clear: both;
   }
-  .product-review-summary-placeholder .review-count {
-    font-size: 0.85em;
-    margin-left: 5px;
-    color: #555;
+  #consolidated-review-section .section-header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .consolidated-owl-carousel .review-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  .consolidated-owl-carousel .review-card .product-title a {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9em;
+  }
+  .consolidated-owl-carousel .review-card .stars {
+    color: #f5a623;
+    font-size: 1.2rem;
+    margin: 10px 0;
+  }
+  .consolidated-owl-carousel .review-card .review-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+  .consolidated-owl-carousel .review-card .review-body {
+    font-size: 1rem;
+    color: #333;
+    flex-grow: 1;
+    margin-bottom: 15px;
+  }
+  .consolidated-owl-carousel .review-card .reviewer-info {
+    font-size: 0.9rem;
+    color: #888;
+  }
+  .consolidated-owl-carousel .review-media-strip {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+  }
+  .consolidated-owl-carousel .review-media-strip .clickable-review-media {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+  }
+  #mediaReviewModal {
+    display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);
+  }
+  #mediaReviewModal .modal-content {
+    background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 800px; position: relative;
+  }
+  #mediaReviewModal #closeReviewMediaModal {
+    color: #333; font-size: 30px; font-weight: bold; cursor: pointer; position: absolute; top: 10px; right: 20px;
+  }
+  #mediaReviewModal #modalReviewMediaContent {
+    margin-top: 10px; text-align: center;
   }
 </style>
+
+<!-- Media Modal HTML (shared by all review blocks) -->
+<div id="mediaReviewModal">
+  <div class="modal-content">
+    <span id="closeReviewMediaModal">&times;</span>
+    <div id="modalReviewMediaContent"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.hasInitializedConsolidatedReviews) return;
+  window.hasInitializedConsolidatedReviews = true;
+
+  const waitForLibs = setInterval(() => {
+    if (window.jQuery && window.jQuery.fn.owlCarousel) {
+      clearInterval(waitForLibs);
+      initConsolidatedReviews();
+    }
+  }, 100);
+});
+
+function initConsolidatedReviews() {
+  const shop = Shopify.shop;
+  if (!shop) return;
+
+  const mainContainer = document.getElementById('MainContent') || document.querySelector('main');
+  if (!mainContainer) return;
+
+  const reviewSection = document.createElement('div');
+  reviewSection.id = 'consolidated-review-section';
+  mainContainer.appendChild(reviewSection);
+
+  const productDataMap = new Map();
+  document.querySelectorAll('a[href*="/products/"]').forEach(link => {
+    const handle = link.href.split('/products/')[1]?.split('?')[0];
+    if (handle && !productDataMap.has(handle)) {
+      const titleElement = link.closest('.card-wrapper')?.querySelector('.card-information__text, .product-card__title, h3, h2');
+      productDataMap.set(handle, { handle, url: link.href, title: titleElement ? titleElement.innerText.trim() : 'Product' });
+    }
+  });
+
+  if (productDataMap.size === 0) return;
+
+  const fetchPromises = Array.from(productDataMap.values()).map(p =>
+    fetch(`/products/${p.handle}.js`).then(res => res.json()).then(product => {
+      productDataMap.get(p.handle).id = product.id;
+    }).catch(() => {})
+  );
+
+  Promise.all(fetchPromises).then(() => {
+    const productIds = Array.from(productDataMap.values()).map(p => p.id).filter(id => id);
+    if (productIds.length === 0) return;
+
+    const url = `/apps/rating/get-rating?shop=${encodeURIComponent(shop)}&product_ids=${productIds.join(',')}`;
+    fetch(url)
+      .then(res => res.ok ? res.json() : Promise.reject('No review data'))
+      .then(data => {
+        const { reviewsByProduct, settings, reviewDisplayHeading: heading } = data || {};
+        const allReviews = reviewsByProduct ? Object.values(reviewsByProduct).flat() : [];
+
+        if (!settings || allReviews.length === 0 || settings.status?.value.toLowerCase() !== 'enabled') return;
+
+        let reviewHtml = `
+          <div class="section-header"><h2>${heading || "What Our Customers Say"}</h2></div>
+          <div class="owl-carousel owl-theme consolidated-owl-carousel">`;
+
+        const productInfoById = new Map();
+        productDataMap.forEach(p => productInfoById.set(p.id.toString(), p));
+
+        allReviews.forEach(r => {
+          const product = productInfoById.get(r.productId);
+          if (!product) return;
+
+          let mediaDisplayHTML = '';
+          if (r.media) {
+            try {
+              const mediaUrls = JSON.parse(r.media);
+              if (Array.isArray(mediaUrls) && mediaUrls.length > 0) {
+                mediaDisplayHTML = '<div class="review-media-strip">';
+                mediaUrls.forEach(url => {
+                  if (/\.(jpeg|jpg|gif|png)$/i.test(url)) {
+                    mediaDisplayHTML += `<img src="${url}" alt="Review media" class="clickable-review-media" data-media-url="${url}">`;
+                  } else if (/\.(mp4|webm|ogg)$/i.test(url)) {
+                    mediaDisplayHTML += `<video src="${url}" muted loop autoplay playsinline class="clickable-review-media" data-media-url="${url}"></video>`;
+                  }
+                });
+                mediaDisplayHTML += '</div>';
+              }
+            } catch (e) {}
+          }
+
+          reviewHtml += `
+            <div class="item">
+              <div class="review-card">
+                <div class="product-title"><a href="${product.url}">${product.title}</a></div>
+                <div class="stars">${"★".repeat(r.star)}${"☆".repeat(5 - r.star)}</div>
+                <div class="review-title">${r.reviewTitle || ''}</div>
+                <div class="review-body">${r.review || ''}</div>
+                ${mediaDisplayHTML}
+                <div class="reviewer-info"><strong>${r.customerName}</strong> on ${new Date(r.createdAt).toLocaleDateString()}</div>
+              </div>
+            </div>`;
+        });
+
+        reviewHtml += `</div>`;
+        reviewSection.innerHTML = reviewHtml;
+        reviewSection.style.display = 'block';
+
+        $('.consolidated-owl-carousel').owlCarousel({
+          loop: allReviews.length > 3, margin: 20, nav: true, dots: true,
+          responsive: { 0: { items: 1 }, 768: { items: 2 }, 1024: { items: 3 } }
+        });
+      })
+      .catch(() => {});
+  });
+
+  // --- MEDIA MODAL LOGIC (SHARED) ---
+  const mediaModal = document.getElementById("mediaReviewModal");
+  const modalContent = document.getElementById("modalReviewMediaContent");
+  const closeModalBtn = document.getElementById("closeReviewMediaModal");
+
+  const openMediaModal = (mediaUrl) => {
+    if (!mediaUrl) return;
+    let element = `<img src="${mediaUrl}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+    if (/\.(mp4|webm|ogg)$/i.test(mediaUrl)) {
+      element = `<video src="${mediaUrl}" controls autoplay style="max-width: 100%; max-height: 80vh;"></video>`;
+    }
+    modalContent.innerHTML = element;
+    mediaModal.style.display = "block";
+  };
+
+  const closeMediaModal = () => {
+    mediaModal.style.display = "none";
+    modalContent.innerHTML = '';
+  };
+
+  closeModalBtn.onclick = closeMediaModal;
+  document.body.addEventListener('click', function(event) {
+    if (event.target.classList.contains('clickable-review-media')) {
+      openMediaModal(event.target.dataset.mediaUrl);
+    }
+    if (event.target == mediaModal) {
+      closeMediaModal();
+    }
+  });
+}
+</script>

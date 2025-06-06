@@ -39,7 +39,6 @@ function convertBigInt_MI(obj) {
 }
 
 export async function action({ request }) {
-  console.log(`--- UPDATE-RATING ACTION CALLED --- Method: ${request.method}, URL: ${request.url}`); // Diagnostic log
 
   if (request.method === 'OPTIONS') {
     return new Response(null, {
@@ -60,6 +59,7 @@ export async function action({ request }) {
     const formData = await request.formData();
     const id = formData.get('id');
     const customerName = formData.get('customerName');
+    const customerEmail = formData.get('customerEmail');
     const review = formData.get('review');
     const star = formData.get('star');
     const status = formData.get('status');
@@ -103,6 +103,7 @@ export async function action({ request }) {
 
     const updateData = {
       customerName,
+      customerEmail,
       review,
       star: star !== undefined ? parseInt(star) : undefined, // Keep undefined if not provided
       status: status || 'pending',

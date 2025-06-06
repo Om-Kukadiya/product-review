@@ -513,6 +513,7 @@ export default function RatingsAdminPage() {
   const [editingRating, setEditingRating] = useState(null);
   const [editFields, setEditFields] = useState({
     customerName: '',
+    customerEmail: '',
     reviewTitle: '',
     review: '',
     star: '',
@@ -524,6 +525,7 @@ export default function RatingsAdminPage() {
   const [showInsertModal, setShowInsertModal] = useState(false);
   const [insertFields, setInsertFields] = useState({
     customerName: '',
+    customerEmail: '',
     reviewTitle: '',
     review: '',
     star: '',
@@ -1063,6 +1065,7 @@ export default function RatingsAdminPage() {
     setEditingRating(rating);
     setEditFields({
       customerName: rating.customerName || '',
+      customerEmail: rating.customerEmail || '',
       reviewTitle: rating.reviewTitle || '',
       review: rating.review || '',
       star: rating.star ? rating.star.toString() : '',
@@ -1093,6 +1096,7 @@ export default function RatingsAdminPage() {
       const formData = new FormData();
       formData.append('id', editingRating.id);
       formData.append('customerName', editFields.customerName);
+      formData.append('customerEmail', editFields.customerEmail);
       formData.append('reviewTitle', editFields.reviewTitle);
       formData.append('review', editFields.review);
       formData.append('star', editFields.star);
@@ -1156,6 +1160,7 @@ export default function RatingsAdminPage() {
     try {
       const formData = new FormData();
       formData.append('customerName', insertFields.customerName);
+      formData.append('customerEmail', insertFields.customerEmail);
       formData.append('reviewTitle', insertFields.reviewTitle);
       formData.append('review', insertFields.review);
       formData.append('star', insertFields.star);
@@ -1180,6 +1185,7 @@ export default function RatingsAdminPage() {
       fetchReviews(selectedProductId);
       setInsertFields({
         customerName: '',
+        customerEmail: '',
         reviewTitle: '',
         review: '',
         star: '',
@@ -1202,7 +1208,6 @@ export default function RatingsAdminPage() {
     const productDisplay = product
       ? `${product.title}`
       : rating.productId.toString();
-    // console.log(`Rating ID: ${rating.id}, Media Data:`, rating.media); // Debug log removed
     let mediaDisplay = 'None';
     if (rating.media) {
       try {
@@ -1231,6 +1236,7 @@ export default function RatingsAdminPage() {
     return [
       // rating.id,
       rating.customerName,
+      rating.customerEmail,
       productDisplay,
       '★'.repeat(rating.star) + '☆'.repeat(5 - rating.star),
       rating.reviewTitle || '',
@@ -1601,7 +1607,7 @@ export default function RatingsAdminPage() {
                   </div>
                   {account && (
                     <img
-                      src="/account.png"
+                      src="/account.svg"
                       alt="Account"
                       style={accountIconStyle}
                       onClick={() => setShowAccount(!showAccount)}
@@ -2055,6 +2061,7 @@ export default function RatingsAdminPage() {
                         columnContentTypes={[
                           // 'text', // ID - commented out in rows mapping
                           'text', // Customer Name
+                          'text', // Customer Email
                           'text', // Product
                           'text', // Ratings
                           'text', // Review Title
@@ -2067,6 +2074,7 @@ export default function RatingsAdminPage() {
                         headings={[
                           // 'ID',
                           'Customer Name',
+                          'Customer Email',
                           'Product',
                           'Ratings',
                           'Review Title',
@@ -2160,6 +2168,14 @@ export default function RatingsAdminPage() {
                         setInsertFields({ ...insertFields, customerName: val })
                       }
                       requiredIndicator
+                    />
+                    <TextField
+                      label="Customer Email"
+                      value={insertFields.customerEmail}
+                      onChange={(val) =>
+                        setInsertFields({ ...insertFields, customerEmail: val })
+                      }
+                      type="email"
                     />
                     <TextField
                       label="Review Title"
@@ -2287,6 +2303,14 @@ export default function RatingsAdminPage() {
                         setEditFields({ ...editFields, customerName: val })
                       }
                       requiredIndicator
+                    />
+                    <TextField
+                      label="Customer Email"
+                      value={editFields.customerEmail}
+                      onChange={(val) =>
+                        setEditFields({ ...editFields, customerEmail: val })
+                      }
+                      type="email"
                     />
                     <TextField
                       label="Review Title"

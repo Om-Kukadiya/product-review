@@ -1,13 +1,22 @@
 {% comment %}
   App embed block to inject product review summaries on collection pages.
+  This script will dynamically find product cards and inject review summaries.
 {% endcomment %}
 
-{% render 'collection-product-reviews' %}
+{%- liquid
+  render 'collection-product-reviews'
+-%}
 
 {% schema %}
 {
   "name": "Collection Reviews Embed",
   "target": "body",
-  "settings": []
+  "templates": ["collection"],
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "This block adds review summaries to product cards on collection pages. No configuration is needed."
+    }
+  ]
 }
 {% endschema %}
