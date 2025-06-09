@@ -65,7 +65,7 @@ const inputContainerStyle = {
   backgroundColor: "#F0F2F5",
   display: "flex",
   alignItems: "center",
-  gap: "0.5rem",
+  gap: "1rem",
   height: "44px",
   width: "100%",
   boxSizing: "border-box",
@@ -233,7 +233,7 @@ const dropdownItemStyle = {
   color: "#333",
   display: "flex",
   alignItems: "center",
-  gap: "0.5rem",
+  gap: "1rem",
   backgroundColor: "transparent",
   borderRadius: "4px",
   height: "40px",
@@ -1265,7 +1265,7 @@ export default function StarRatingSettings() {
                           aria-expanded={isStatusDropdownOpen}
                           aria-controls="status-dropdown"
                         >
-                          <div style={{ display: "flex", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                             <img
                               src={formState.status === "enabled" ? "/enabled.svg" : "/disabled.svg"}
                               alt={formState.status === "enabled" ? "Enabled" : "Disabled"}
@@ -1346,7 +1346,7 @@ export default function StarRatingSettings() {
                           aria-expanded={isDisplayStyleDropdownOpen}
                           aria-controls="display-style-dropdown"
                         >
-                          <div style={{ display: "flex", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                             <img
                               src={formState.displayStyle === "grid" ? "/grid_dis.svg" : "/carousel.svg"}
                               alt={formState.displayStyle === "grid" ? "Grid" : "Owl Carousel"}
